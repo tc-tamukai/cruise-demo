@@ -188,6 +188,7 @@
   .opt-card .opt-body { flex: 1; }
   .opt-card h4 { margin: 0 0 2px; }
   .opt-card .opt-price { text-align: right; white-space: nowrap; }
+  .guests-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
   .agree-box { margin-top: 24px; padding: 20px 16px; border: 2px solid var(--accent); border-radius: var(--radius); background: #fffbeb; text-align: center; transition: border-color .15s, background .15s; }
   .agree-box.checked { border-color: var(--success); background: #f0fdf4; }
   .agree-label { display: inline-flex; align-items: center; gap: 10px; margin: 0; cursor: pointer; font-size: 17px; font-weight: 700; color: var(--text); }
@@ -234,15 +235,6 @@
       <div>
         <label for="fMonth">出発月</label>
         <select id="fMonth"></select>
-      </div>
-      <div>
-        <label for="fGuests">人数</label>
-        <select id="fGuests">
-          <option value="1">大人1名</option>
-          <option value="2" selected>大人2名</option>
-          <option value="3">大人3名</option>
-          <option value="4">大人4名</option>
-        </select>
       </div>
       <div><button class="btn" type="submit" style="width:100%">検索する</button></div>
     </form>
@@ -291,6 +283,16 @@
           <ul class="itinerary" id="dItin"></ul>
         </div>
         <div class="card">
+          <div class="guests-row">
+            <label for="fGuests" style="margin:0; font-weight:700; color:var(--text); font-size:15px">ご利用人数</label>
+            <select id="fGuests" style="width:auto">
+              <option value="1">大人1名</option>
+              <option value="2" selected>大人2名</option>
+              <option value="3">大人3名</option>
+              <option value="4">大人4名</option>
+            </select>
+            <span class="note">1室あたりの人数です（最大4名）</span>
+          </div>
           <h3 style="margin-top:0">客室タイプを選択</h3>
           <div class="cabins" id="cabinList"></div>
           <div id="deckWrap" class="hidden">
@@ -450,9 +452,9 @@ function init() {
     const v = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
     m.innerHTML += `<option value="${v}">${d.getFullYear()}年${d.getMonth()+1}月</option>`;
   }
-  $("searchForm").addEventListener("submit", e => { e.preventDefault(); state.guests = +$("fGuests").value; goTo("search"); });
+  $("searchForm").addEventListener("submit", e => { e.preventDefault(); goTo("search"); });
   ["priceMax","onlySale","onlyJp","sortBy"].forEach(id => $(id).addEventListener("input", renderResults));
-  $("fGuests").addEventListener("change", () => { state.guests = +$("fGuests").value; renderResults(); });
+  $("fGuests").addEventListener("change", () => { state.guests = +$("fGuests").value; renderSummary("summary1"); });
   $("agree").addEventListener("change", e => {
     $("bookBtn").disabled = !e.target.checked;
     $("agreeBox").classList.toggle("checked", e.target.checked);
@@ -497,7 +499,7 @@ function renderResults() {
     sort === "nights" ? a.nights - b.nights :
     a.date.localeCompare(b.date));
 
-  $("resultCount").textContent = `${list.length}件のクルーズが見つかりました（大人${state.guests}名）`;
+  $("resultCount").textContent = `${list.length}件のクルーズが見つかりました`;
   $("results").innerHTML = list.length ? list.map(c => `
     <div class="card cruise">
       <div class="thumb" style="background:linear-gradient(160deg, ${c.color}, #0b1f3a)">🚢 ${c.ship}</div>
@@ -526,6 +528,7 @@ function selectCruise(id) {
 // ---------- STEP2 ----------
 function renderCabin() {
   const c = state.cruise;
+  $("fGuests").value = state.guests;
   $("dTitle").textContent = c.name;
   $("dMeta").textContent = `${c.ship}（${c.line}）｜${fmtDate(c.date)} 〜 ${fmtDate(addDays(c.date, c.nights))}｜${c.nights}泊`;
   $("dItin").innerHTML = c.itin.map((p, i) =>
@@ -715,7 +718,7 @@ function completeBooking() {
 }
 
 function resetAll() {
-  Object.assign(state, { cruise: null, cabin: null, room: null, options: {}, pax: [] });
+  Object.assign(state, { cruise: null, cabin: null, room: null, guests: 2, options: {}, pax: [] });
   $("cEmail").value = ""; $("cTel").value = "";
   goTo("search");
 }
