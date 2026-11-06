@@ -200,6 +200,8 @@
   .booking-no { font-size: 28px; font-weight: 700; letter-spacing: .1em; color: var(--primary); margin: 8px 0 16px; }
   .hidden { display: none !important; }
   .empty { text-align: center; color: var(--muted); padding: 40px; }
+  .spinner { width: 36px; height: 36px; margin: 0 auto 14px; border: 4px solid #cbd5e1; border-top-color: #0e7490; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   footer { text-align: center; font-size: 12px; color: var(--muted); padding: 24px; }
   .mock-banner { background: #fef3c7; color: #92400e; font-size: 12px; text-align: center; padding: 4px; }
 </style>
@@ -435,6 +437,10 @@ const PORT_FEE = 12000;            // 1名あたり
 
 // ---------- 状態 ----------
 const state = { cruise: null, cabin: null, room: null, guests: 2, options: {}, pax: [] };
+// 検索状態: "idle"（未検索） / "loading"（検索中） / "done"（結果表示）
+let searchStatus = "idle";
+let searchTimer = null;
+const SEARCH_DELAY_MS = 5000;
 
 const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
 const $ = id => document.getElementById(id);
@@ -452,7 +458,7 @@ function init() {
     const v = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
     m.innerHTML += `<option value="${v}">${d.getFullYear()}年${d.getMonth()+1}月</option>`;
   }
-  $("searchForm").addEventListener("submit", e => { e.preventDefault(); goTo("search"); });
+  $("searchForm").addEventListener("submit", e => { e.preventDefault(); runSearch(); });
   ["priceMax","onlySale","onlyJp","sortBy"].forEach(id => $(id).addEventListener("input", renderResults));
   $("fGuests").addEventListener("change", () => { state.guests = +$("fGuests").value; renderSummary("summary1"); });
   $("agree").addEventListener("change", e => {
@@ -482,10 +488,33 @@ function goTo(view) {
 }
 
 // ---------- STEP1 ----------
+function runSearch() {
+  clearTimeout(searchTimer);
+  searchStatus = "loading";
+  goTo("search");
+  searchTimer = setTimeout(() => {
+    searchStatus = "done";
+    renderResults();
+  }, SEARCH_DELAY_MS);
+}
+
 function renderResults() {
   const dest = $("fDest").value, month = $("fMonth").value;
   const max = +$("priceMax").value;
   $("priceMaxLabel").textContent = yen(max);
+  const submitBtn = $("searchForm").querySelector("button[type=submit]");
+  submitBtn.disabled = searchStatus === "loading";
+  submitBtn.textContent = searchStatus === "loading" ? "検索中…" : "検索する";
+  if (searchStatus === "idle") {
+    $("resultCount").textContent = "";
+    $("results").innerHTML = `<div class="card empty">行き先・出発月を指定して「検索する」ボタンを押してください。</div>`;
+    return;
+  }
+  if (searchStatus === "loading") {
+    $("resultCount").textContent = "検索中…";
+    $("results").innerHTML = `<div class="card empty"><div class="spinner"></div>クルーズを検索しています…</div>`;
+    return;
+  }
   let list = CRUISES.filter(c =>
     (!dest || c.dest === dest) &&
     (!month || c.date.startsWith(month)) &&
@@ -719,6 +748,8 @@ function completeBooking() {
 
 function resetAll() {
   Object.assign(state, { cruise: null, cabin: null, room: null, guests: 2, options: {}, pax: [] });
+  clearTimeout(searchTimer);
+  searchStatus = "idle";
   $("cEmail").value = ""; $("cTel").value = "";
   goTo("search");
 }
