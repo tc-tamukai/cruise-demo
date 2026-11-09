@@ -224,17 +224,6 @@
   <div class="card search" id="searchBox">
     <form id="searchForm">
       <div>
-        <label for="fDest">行き先</label>
-        <select id="fDest">
-          <option value="">すべて</option>
-          <option>日本・アジア</option>
-          <option>カリブ海</option>
-          <option>地中海</option>
-          <option>アラスカ</option>
-          <option>北欧</option>
-        </select>
-      </div>
-      <div>
         <label for="fMonth">出発月</label>
         <select id="fMonth"></select>
       </div>
@@ -249,6 +238,17 @@
     <div class="layout">
       <aside class="card filters">
         <h3>絞り込み</h3>
+        <div class="group">
+          <label for="fDest">行き先</label>
+          <select id="fDest">
+            <option value="">すべて</option>
+            <option>日本・アジア</option>
+            <option>カリブ海</option>
+            <option>地中海</option>
+            <option>アラスカ</option>
+            <option>北欧</option>
+          </select>
+        </div>
         <div class="group">
           <label for="priceMax">最大料金（1名）: <span id="priceMaxLabel"></span></label>
           <input type="range" id="priceMax" min="50000" max="800000" step="10000" value="800000">
@@ -459,7 +459,7 @@ function init() {
     m.innerHTML += `<option value="${v}">${d.getFullYear()}年${d.getMonth()+1}月</option>`;
   }
   $("searchForm").addEventListener("submit", e => { e.preventDefault(); runSearch(); });
-  ["priceMax","onlySale","onlyJp","sortBy"].forEach(id => $(id).addEventListener("input", renderResults));
+  ["fDest","priceMax","onlySale","onlyJp","sortBy"].forEach(id => $(id).addEventListener("input", renderResults));
   $("fGuests").addEventListener("change", () => { state.guests = +$("fGuests").value; renderSummary("summary1"); });
   $("agree").addEventListener("change", e => {
     $("bookBtn").disabled = !e.target.checked;
@@ -507,7 +507,7 @@ function renderResults() {
   submitBtn.textContent = searchStatus === "loading" ? "検索中…" : "検索する";
   if (searchStatus === "idle") {
     $("resultCount").textContent = "";
-    $("results").innerHTML = `<div class="card empty">行き先・出発月を指定して「検索する」ボタンを押してください。</div>`;
+    $("results").innerHTML = `<div class="card empty">出発月を指定して「検索する」ボタンを押してください。</div>`;
     return;
   }
   if (searchStatus === "loading") {
@@ -566,15 +566,13 @@ function renderCabin() {
   // 客室ごとの空き状況は id から擬似的に決める
   $("cabinList").innerHTML = CABINS.map((cb, i) => {
     const soldout = (c.id + i) % 7 === 0;
-    const left = soldout ? 0 : ((c.id * 3 + i * 5) % 9) + 1;
     return `<div class="cabin ${state.cabin?.key === cb.key ? "selected" : ""} ${soldout ? "soldout" : ""}"
                  onclick="${soldout ? "" : `selectCabin('${cb.key}')`}">
       <h4>${cb.name}</h4>
       <div class="meta">${cb.size}</div>
       <ul>${cb.feats.map(f => `<li>${f}</li>`).join("")}</ul>
       <div class="price" style="font-size:18px">${yen(unitPrice(c) * cb.mult)}<small> / 1名</small></div>
-      <div class="note" style="color:${soldout ? "var(--danger)" : left <= 3 ? "var(--accent)" : "var(--muted)"}">
-        ${soldout ? "満室" : left <= 3 ? `残りわずか（${left}室）` : "空室あり"}</div>
+      ${soldout ? `<div class="note" style="color:var(--danger)">満室</div>` : ""}
     </div>`;
   }).join("");
 
